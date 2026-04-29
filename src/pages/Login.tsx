@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, sendEmailVerification, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { OperationType, handleFirestoreError } from '../components/AuthProvider';
@@ -8,6 +8,7 @@ import { motion } from 'motion/react';
 import { UserRole } from '../types';
 import { Mail, Lock, User as UserIcon, ShieldCheck } from 'lucide-react';
 import Logo from '../components/Logo';
+import SEO from '../components/SEO';
 
 export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -82,8 +83,26 @@ export default function Login() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError('Please enter your email address first to reset password.');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setError('Password reset email sent! Check your inbox.');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex flex-col justify-center items-center p-4">
+      <SEO title={isSignUp ? "Sign Up - FaceLinkUp" : "Log In - FaceLinkUp"} description="Log in or create a new FaceLinkUp account to access your professional dashboard." />
       <Link to="/" className="flex flex-col items-center gap-2 mb-8 group">
         <Logo size="xl" />
         <span className="text-3xl font-black text-[#0A2F6F] tracking-tighter">LINK</span>
@@ -98,7 +117,7 @@ export default function Login() {
         <p className="text-[#6C757D] mb-8">{isSignUp ? 'Join the hybrid workforce network' : 'Log in to your professional social hub'}</p>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100">
+          <div className={`mb-6 p-4 rounded-xl text-sm border ${error.includes('sent') ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
             {error}
           </div>
         )}
@@ -141,6 +160,18 @@ export default function Login() {
               className="w-full pl-12 pr-4 py-4 bg-[#F8F9FA] border-none rounded-2xl focus:ring-2 focus:ring-[#0A2F6F]/20 outline-none"
             />
           </div>
+
+          {!isSignUp && (
+            <div className="flex justify-end">
+              <button 
+                type="button" 
+                onClick={handleForgotPassword}
+                className="text-xs font-bold text-[#10A37F] hover:underline"
+              >
+                Forgot Password?
+              </button>
+            </div>
+          )}
 
           {isSignUp && (
             <div className="space-y-3">

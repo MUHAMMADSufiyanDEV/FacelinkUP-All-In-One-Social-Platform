@@ -10,10 +10,12 @@ import {
 } from 'lucide-react';
 
 import Logo from '../components/Logo';
+import SEO from '../components/SEO';
 
 export default function Landing() {
   return (
     <div className="min-h-screen bg-white">
+      <SEO title="FaceLinkUp - The Ultimate Professional Platform" description="Join FaceLinkUp to connect with industry leaders, discover jobs, and thrive in your professional career." />
       {/* Navbar */}
       <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-md z-50 border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">

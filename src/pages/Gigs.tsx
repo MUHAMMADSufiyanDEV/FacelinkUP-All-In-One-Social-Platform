@@ -23,7 +23,7 @@ import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 
 export default function Gigs() {
-  const { profile, user } = useAuth();
+  const { profile, user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [gigs, setGigs] = useState<Gig[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -53,7 +53,7 @@ export default function Gigs() {
 
   const handleCreateGig = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile || profile.role !== 'freelancer') return;
+    if (!profile || (profile.role !== 'freelancer' && !isAdmin)) return;
 
     try {
       await addDoc(collection(db, 'gigs'), {
@@ -125,10 +125,10 @@ export default function Gigs() {
           <h1 className="text-3xl font-bold text-[#0A2F6F] mb-1 tracking-tight">Service Gigs</h1>
           <p className="text-[#6C757D] text-sm">Browse professional services offered by our network of freelancers.</p>
         </div>
-        {profile?.role === 'freelancer' && (
+        {(profile?.role === 'freelancer' || isAdmin) && (
           <button 
             onClick={() => setIsModalOpen(true)}
-            disabled={!user?.emailVerified}
+            disabled={!isAdmin && !user?.emailVerified}
             className="flex items-center gap-2 px-6 py-3 bg-[#10A37F] text-white font-bold rounded-2xl hover:scale-105 transition-all shadow-lg shadow-[#10A37F]/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus className="w-5 h-5" />

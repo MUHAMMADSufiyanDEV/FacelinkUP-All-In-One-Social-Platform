@@ -13,7 +13,8 @@ import {
   LogOut,
   Users,
   Check,
-  ShoppingBag
+  ShoppingBag,
+  FileText
 } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 import { cn } from '../lib/utils';
@@ -41,7 +42,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const { signOut, profile, user, refreshUser, resendVerification } = useAuth();
+  const { signOut, profile, user, isAdmin, refreshUser, resendVerification } = useAuth();
   const location = useLocation();
 
   const handleRefresh = async () => {
@@ -95,6 +96,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     await updateDoc(doc(db, 'notifications', id), { read: true });
   };
 
+  const currentNavItems = [
+    ...navItems,
+    { icon: FileText, label: 'Blogs', path: '/blogs' },
+    ...(isAdmin ? [{ icon: Users, label: 'Admin', path: '/admin' }] : []),
+  ];
+
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex">
       {/* Mobile Sidebar Overlay */}
@@ -122,7 +129,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </Link>
 
           <nav className="flex-1 px-2 space-y-1">
-            {navItems.map((item) => (
+            {currentNavItems.map((item) => (
               <Link
                 key={item.path}
                 to={item.path}

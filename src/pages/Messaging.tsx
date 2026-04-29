@@ -35,7 +35,7 @@ import { cn } from '../lib/utils';
 import { sendEmailNotification } from '../lib/notifications';
 
 export default function Messaging() {
-  const { profile, user: authUser } = useAuth();
+  const { profile, user: authUser, isAdmin } = useAuth();
   const location = useLocation();
   const contactIdFromState = location.state?.contactId;
   const [contacts, setContacts] = useState<any[]>([]);
@@ -320,18 +320,18 @@ export default function Messaging() {
              <button type="button" className="text-[#6C757D] hover:text-[#0A2F6F] transition-colors"><ImageIcon className="w-5 h-5" /></button>
              <input 
               type="text" 
-              placeholder={authUser?.emailVerified ? "Type a message..." : "Verify email to message..."}
+              placeholder={authUser?.emailVerified || isAdmin ? "Type a message..." : "Verify email to message..."}
               value={msgInput}
               onChange={(e) => setMsgInput(e.target.value)}
-              disabled={!authUser?.emailVerified}
+              disabled={!isAdmin && !authUser?.emailVerified}
               className="flex-1 bg-transparent border-none outline-none text-sm py-2 disabled:cursor-not-allowed"
              />
              <button 
               type="submit"
-              disabled={!msgInput.trim() || isSending || !authUser?.emailVerified}
+              disabled={!msgInput.trim() || isSending || (!isAdmin && !authUser?.emailVerified)}
               className={cn(
                 "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
-                msgInput.trim() && authUser?.emailVerified ? "bg-[#0A2F6F] text-white shadow-lg shadow-[#0A2F6F]/20" : "bg-[#DEE2E6] text-[#6C757D]"
+                msgInput.trim() && (isAdmin || authUser?.emailVerified) ? "bg-[#0A2F6F] text-white shadow-lg shadow-[#0A2F6F]/20" : "bg-[#DEE2E6] text-[#6C757D]"
               )}
              >
                 <Send className="w-5 h-5" />

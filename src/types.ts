@@ -122,3 +122,14 @@ export interface Follow {
   followingId: string;
   createdAt: any;
 }
+
+export interface Blog {
+  id: string;
+  title: string;
+  content: string;
+  authorId: string;
+  imageUrl?: string;
+  tags?: string[];
+  createdAt: any;
+  published?: boolean;
+}

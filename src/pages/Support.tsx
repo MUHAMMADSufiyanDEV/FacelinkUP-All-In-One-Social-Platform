@@ -2,10 +2,12 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { HelpCircle, Mail, MessageSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import SEO from '../components/SEO';
 
 export default function Support() {
   return (
     <div className="min-h-screen bg-[#F8F9FA] pt-20 px-4">
+      <SEO title="Support - FaceLinkUp" description="Get help with FaceLinkUp. Contact our support team for any issues or questions." />
       <div className="max-w-5xl mx-auto py-12">
         <Link to="/" className="text-sm text-[#0A2F6F] hover:underline mb-8 inline-block">← Back to Home</Link>
         <motion.div 
@@ -37,20 +39,22 @@ export default function Support() {
 
         <div className="mt-20 bg-white rounded-3xl p-10 border border-gray-100 shadow-xl shadow-gray-200/50">
           <h2 className="text-2xl font-bold text-[#0A2F6F] mb-6">Contact Us</h2>
-          <form className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <form action="https://formsubmit.co/m.sufiyan1581@gmail.com" method="POST" className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <input type="hidden" name="_captcha" value="false" />
+            <input type="hidden" name="_next" value={window.location.origin + "/support"} />
             <div className="space-y-2">
               <label className="text-sm font-bold text-gray-700">Name</label>
-              <input type="text" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0A2F6F] outline-none" placeholder="Your name" />
+              <input type="text" name="name" required className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0A2F6F] outline-none" placeholder="Your name" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-bold text-gray-700">Email</label>
-              <input type="email" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0A2F6F] outline-none" placeholder="Your email" />
+              <input type="email" name="email" required className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0A2F6F] outline-none" placeholder="Your email" />
             </div>
             <div className="md:col-span-2 space-y-2">
               <label className="text-sm font-bold text-gray-700">Message</label>
-              <textarea className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0A2F6F] outline-none h-32 resize-none" placeholder="How can we help?"></textarea>
+              <textarea name="message" required className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0A2F6F] outline-none h-32 resize-none" placeholder="How can we help?"></textarea>
             </div>
-            <button type="button" className="md:col-span-2 py-4 bg-[#0A2F6F] text-white font-bold rounded-2xl hover:bg-[#0A2F6F]/90 transition-all">
+            <button type="submit" className="md:col-span-2 py-4 bg-[#0A2F6F] text-white font-bold rounded-2xl hover:bg-[#0A2F6F]/90 transition-all">
               Send Message
             </button>
           </form>

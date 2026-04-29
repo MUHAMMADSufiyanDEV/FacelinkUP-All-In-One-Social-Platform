@@ -154,6 +154,21 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["followerId", "followingId", "createdAt"]
+    },
+    "Blog": {
+      "title": "Blog Post",
+      "description": "An article or blog post written by an admin",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "authorId": { "type": "string" },
+        "imageUrl": { "type": "string", "format": "uri" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "published": { "type": "boolean" }
+      },
+      "required": ["title", "content", "authorId", "createdAt"]
     }
   },
   "firestore": {
@@ -200,6 +215,10 @@
     "notifications/{notificationId}": {
       "schema": "Notification",
       "description": "User alerts"
+    },
+    "blogs/{blogId}": {
+      "schema": "Blog",
+      "description": "Platform blog posts and articles"
     }
   }
 }

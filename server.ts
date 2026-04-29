@@ -57,6 +57,46 @@ async function startServer() {
     }
   });
 
+  // Dynamic Sitemap Endpoints
+  const domain = 'https://facelinkup.com';
+
+  app.get('/sitemap.xml', (req, res) => {
+    res.header('Content-Type', 'application/xml');
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <sitemap>
+    <loc>${domain}/page-sitemap.xml</loc>
+    <lastmod>${new Date().toISOString()}</lastmod>
+  </sitemap>
+</sitemapindex>`);
+  });
+
+  app.get('/page-sitemap.xml', (req, res) => {
+    res.header('Content-Type', 'application/xml');
+    
+    // Add additional URLs here as they become public
+    const publicPages = [
+      { url: '/', priority: '1.0', changefreq: 'daily' },
+      { url: '/support', priority: '0.8', changefreq: 'monthly' },
+      { url: '/login', priority: '0.8', changefreq: 'monthly' }
+    ];
+
+    const urlset = publicPages.map(page => `
+  <url>
+    <loc>${domain}${page.url}</loc>
+    <lastmod>${new Date().toISOString()}</lastmod>
+    <changefreq>${page.changefreq}</changefreq>
+    <priority>${page.priority}</priority>
+  </url>`).join('');
+
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urlset}
+</urlset>`);
+  });
+
   // Handle Vite in dev or static files in production
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

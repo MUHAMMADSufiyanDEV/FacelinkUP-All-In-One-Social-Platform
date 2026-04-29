@@ -48,13 +48,15 @@ interface PostCardProps {
 
 export default function Dashboard() {
   const [posts, setPosts] = useState<PostType[]>([]);
+  const [isLoadingPosts, setIsLoadingPosts] = useState(true);
   const [newPostContent, setNewPostContent] = useState('');
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
   const [showMediaInput, setShowMediaInput] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
   const [popularGigs, setPopularGigs] = useState<Gig[]>([]);
-  const { profile, user } = useAuth();
+  const [isLoadingGigs, setIsLoadingGigs] = useState(true);
+  const { profile, user, isAdmin } = useAuth();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -65,6 +67,7 @@ export default function Dashboard() {
         ...doc.data() 
       } as PostType));
       setPosts(postsData);
+      setIsLoadingPosts(false);
     });
     return () => unsubscribe();
   }, []);
@@ -73,6 +76,7 @@ export default function Dashboard() {
     const q = query(collection(db, 'gigs'), orderBy('rating', 'desc'), limit(3));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setPopularGigs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Gig)));
+      setIsLoadingGigs(false);
     });
     return () => unsubscribe();
   }, []);
@@ -322,35 +326,62 @@ export default function Dashboard() {
                   </button>
                 </div>
                 <button 
-                  disabled={isPosting || !newPostContent.trim() || !user?.emailVerified}
+                  disabled={isPosting || !newPostContent.trim() || (!isAdmin && !user?.emailVerified)}
                   className="bg-[#0A2F6F] text-white px-5 py-1.5 rounded-lg text-sm font-semibold hover:bg-[#0A2F6F]/90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isPosting ? 'Post...' : 'Post'}
                 </button>
               </div>
             </form>
-            {!user?.emailVerified && (
+            {!isAdmin && !user?.emailVerified && (
               <p className="text-[10px] text-amber-600 font-medium mt-2">Verify email to share updates.</p>
             )}
           </div>
         </div>
 
         {/* Posts List */}
-        <AnimatePresence>
-          {posts.map((post) => (
-            <PostCard 
-              key={post.id} 
-              post={post} 
-              onLike={() => handleLike(post.id)} 
-              onDelete={handleDeletePost}
-              onEdit={handleEditPost}
-            />
-          ))}
-        </AnimatePresence>
+        <div className="space-y-6">
+          {isLoadingPosts ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm animate-pulse">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-gray-200" />
+                  <div className="flex-1">
+                    <div className="w-24 h-4 bg-gray-200 rounded-lg mb-2" />
+                    <div className="w-16 h-3 bg-gray-200 rounded-lg" />
+                  </div>
+                </div>
+                <div className="space-y-2 mb-4">
+                  <div className="w-full h-4 bg-gray-200 rounded-lg" />
+                  <div className="w-5/6 h-4 bg-gray-200 rounded-lg" />
+                  <div className="w-4/6 h-4 bg-gray-200 rounded-lg" />
+                </div>
+                <div className="h-48 w-full bg-gray-200 rounded-xl mb-4" />
+                <div className="flex gap-6 mt-4">
+                  <div className="w-16 h-4 bg-gray-200 rounded-lg" />
+                  <div className="w-20 h-4 bg-gray-200 rounded-lg" />
+                </div>
+              </div>
+            ))
+          ) : (
+            <AnimatePresence>
+              {posts.map((post) => (
+                <div key={post.id} className="mb-6">
+                  <PostCard 
+                    post={post} 
+                    onLike={() => handleLike(post.id)} 
+                    onDelete={handleDeletePost}
+                    onEdit={handleEditPost}
+                  />
+                </div>
+              ))}
+            </AnimatePresence>
+          )}
+        </div>
       </div>
 
       {/* Sidebar Suggestions */}
-      <div className="hidden lg:block space-y-6">
+      <div className="hidden lg:block space-y-6 sticky top-6 self-start">
         <div className="bg-[#0A2F6F] rounded-3xl p-6 text-white shadow-xl shadow-[#0A2F6F]/20 relative overflow-hidden group">
           <div className="relative z-10">
             <h3 className="font-bold text-lg mb-2">Unlock FaceLinkUp Pro</h3>
@@ -360,7 +391,7 @@ export default function Dashboard() {
           <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
         </div>
 
-        <div className="bg-white rounded-3xl p-6 border border-[#E9ECEF] shadow-sm sticky top-24">
+        <div className="bg-white rounded-3xl p-6 border border-[#E9ECEF] shadow-sm">
           <h3 className="font-bold text-[#0A2F6F] mb-4">Trending on FaceLinkUp</h3>
           <div className="space-y-4">
             <TrendingItem hashtag="#FutureOfWork" count="12.4k posts" />
@@ -391,11 +422,23 @@ export default function Dashboard() {
              <Link to="/gigs" className="text-[10px] font-bold text-[#10A37F] hover:underline uppercase">View All</Link>
            </div>
            <div className="space-y-4">
-              {popularGigs.length > 0 ? (
+              {isLoadingGigs ? (
+                <div className="space-y-4">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex gap-3 items-center animate-pulse">
+                      <div className="w-12 h-12 rounded-xl bg-gray-200 shrink-0" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 w-5/6 bg-gray-200 rounded" />
+                        <div className="h-3 w-1/2 bg-gray-200 rounded" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : popularGigs.length > 0 ? (
                 popularGigs.map(gig => (
                   <Link key={gig.id} to="/gigs" className="flex gap-3 items-center group">
                     <div className="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden shrink-0">
-                       <img src={gig.images?.[0] || `https://images.unsplash.com/photo-1542744094-3a56aabd37a3?q=80&w=200&auto=format&fit=crop`} className="w-full h-full object-cover group-hover:scale-110 transition-transform" alt="" />
+                       <img src={gig.images?.[0] || 'https://images.unsplash.com/photo-1542744094-3a56aabd37a3?q=80&w=200&auto=format&fit=crop'} className="w-full h-full object-cover group-hover:scale-110 transition-transform" alt="" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="text-xs font-bold text-[#2D3436] truncate group-hover:text-[#0A2F6F] transition-colors">{gig.title}</h4>
@@ -420,7 +463,7 @@ export default function Dashboard() {
 }
 
 function PostCard({ post, onLike, onDelete, onEdit }: PostCardProps) {
-  const { profile } = useAuth();
+  const { profile, user, isAdmin } = useAuth();
   const [isLiked, setIsLiked] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
@@ -618,7 +661,7 @@ function PostCard({ post, onLike, onDelete, onEdit }: PostCardProps) {
         <div className="flex items-center gap-6 pt-4 border-t border-gray-50">
           <button 
             onClick={onLike}
-            disabled={!useAuth().user?.emailVerified}
+            disabled={!isAdmin && !user?.emailVerified}
             className={cn(
               "flex items-center gap-1.5 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
               isLiked ? "text-[#DC3545]" : "text-[#6C757D] hover:text-[#DC3545]"
@@ -666,7 +709,7 @@ function PostCard({ post, onLike, onDelete, onEdit }: PostCardProps) {
                       className="w-full bg-gray-50 border border-gray-100 rounded-full py-1.5 px-4 text-xs focus:ring-1 focus:ring-[#0A2F6F] outline-none"
                     />
                     <button 
-                      disabled={isSubmittingComment || !commentText.trim() || !useAuth().user?.emailVerified}
+                      disabled={isSubmittingComment || !commentText.trim() || (!isAdmin && !user?.emailVerified)}
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-[#0A2F6F] hover:text-[#0A2F6F]/80 disabled:opacity-30"
                     >
                       <Send className="w-3.5 h-3.5" />

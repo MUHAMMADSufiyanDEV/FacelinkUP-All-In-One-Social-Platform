@@ -38,10 +38,10 @@ export default function Marketplace() {
   const [applications, setApplications] = useState<any[]>([]);
   const [isLoadingApps, setIsLoadingApps] = useState(false);
   
-  const { profile, user } = useAuth();
+  const { profile, user, isAdmin } = useAuth();
 
   useEffect(() => {
-    if (!selectedJob || profile?.role !== 'recruiter' || selectedJob.recruiterId !== profile.uid) {
+    if (!selectedJob || (!isAdmin && (profile?.role !== 'recruiter' || selectedJob.recruiterId !== profile.uid))) {
       setApplications([]);
       return;
     }
@@ -81,7 +81,7 @@ export default function Marketplace() {
 
   const handleCreateJob = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile || profile.role !== 'recruiter') return;
+    if (!profile || (profile.role !== 'recruiter' && !isAdmin)) return;
 
     try {
       await addDoc(collection(db, 'jobs'), {
@@ -198,10 +198,10 @@ export default function Marketplace() {
           <h1 className="text-3xl font-bold text-[#0A2F6F] mb-2 tracking-tight">Marketplace</h1>
           <p className="text-[#6C757D] text-sm">Discover your next big opportunity or find the perfect talent.</p>
         </div>
-        {profile?.role === 'recruiter' && (
+        {(profile?.role === 'recruiter' || isAdmin) && (
           <button 
             onClick={() => setIsModalOpen(true)}
-            disabled={!user?.emailVerified}
+            disabled={!isAdmin && !user?.emailVerified}
             className="flex items-center gap-2 px-6 py-3 bg-[#10A37F] text-white font-bold rounded-2xl hover:scale-105 transition-all shadow-lg shadow-[#10A37F]/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus className="w-5 h-5" />
@@ -407,7 +407,7 @@ export default function Marketplace() {
                     </div>
                   </div>
 
-                  {profile?.role === 'recruiter' && selectedJob.recruiterId === profile.uid && (
+                  {(isAdmin || (profile?.role === 'recruiter' && selectedJob.recruiterId === profile.uid)) && (
                     <div className="mt-8">
                       <h3 className="text-sm font-bold text-[#0A2F6F] mb-4 uppercase tracking-wider flex items-center gap-2">
                         Applications <span className="bg-emerald-50 text-[#10A37F] px-2 py-0.5 rounded-full text-[10px]">{applications.length}</span>
@@ -458,7 +458,7 @@ export default function Marketplace() {
                     {(profile?.role === 'freelancer' || profile?.role === 'user') && profile?.uid !== selectedJob.recruiterId && (
                       <button 
                         onClick={() => setIsApplyModalOpen(true)}
-                        disabled={!user?.emailVerified}
+                        disabled={!isAdmin && !user?.emailVerified}
                         className="flex-1 py-4 bg-[#10A37F] text-white font-bold rounded-2xl hover:bg-[#10A37F]/90 transition-all shadow-lg shadow-[#10A37F]/20 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {user?.emailVerified ? 'Submit Proposal' : 'Verify Email to Apply'}
@@ -511,7 +511,7 @@ export default function Marketplace() {
 }
 
 function JobCard({ job, onView, onApply }: JobCardProps) {
-  const { profile } = useAuth();
+  const { profile, user, isAdmin } = useAuth();
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -539,16 +539,16 @@ function JobCard({ job, onView, onApply }: JobCardProps) {
       </p>
 
       <div className="flex items-center gap-2 pt-4 border-t border-gray-50 mt-auto">
-        {(profile?.role === 'freelancer' || profile?.role === 'user') && profile?.uid !== job.recruiterId && (
+        {(profile?.role === 'freelancer' || profile?.role === 'user' || isAdmin) && profile?.uid !== job.recruiterId && (
           <button 
             onClick={(e) => {
               e.stopPropagation();
               onApply(job);
             }}
-            disabled={!useAuth().user?.emailVerified}
+            disabled={!isAdmin && !user?.emailVerified}
             className="bg-[#10A37F] text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-[#10A37F]/90 transition-colors shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {useAuth().user?.emailVerified ? 'Submit Proposal' : 'Verify to Apply'}
+            {isAdmin || user?.emailVerified ? 'Submit Proposal' : 'Verify to Apply'}
           </button>
         )}
         <button 
@@ -558,7 +558,7 @@ function JobCard({ job, onView, onApply }: JobCardProps) {
           }}
           className={cn(
             "border border-gray-200 text-gray-500 px-4 py-1.5 rounded text-xs font-bold hover:bg-gray-50 transition-colors",
-            ((profile?.role !== 'freelancer' && profile?.role !== 'user') || profile?.uid === job.recruiterId) && "w-full"
+            ((profile?.role !== 'freelancer' && profile?.role !== 'user' && !isAdmin) || profile?.uid === job.recruiterId) && "w-full"
           )}
         >
           View Detail

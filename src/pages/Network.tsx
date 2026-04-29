@@ -24,7 +24,7 @@ import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 
 export default function Network() {
-  const { profile, user } = useAuth();
+  const { profile, user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
@@ -83,7 +83,7 @@ export default function Network() {
   }, []);
 
   const handleFollow = async (targetUserId: string) => {
-    if (!user || !profile || !user.emailVerified) return;
+    if (!user || !profile || (!isAdmin && !user.emailVerified)) return;
     try {
       await addDoc(collection(db, 'follows'), {
         followerId: user.uid,
@@ -113,7 +113,7 @@ export default function Network() {
   };
 
   const handleConnect = async (targetUserId: string) => {
-    if (!user || !profile || !user.emailVerified) return;
+    if (!user || !profile || (!isAdmin && !user.emailVerified)) return;
     try {
       await addDoc(collection(db, 'connections'), {
         user1Id: user.uid,

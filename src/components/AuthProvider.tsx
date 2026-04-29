@@ -54,6 +54,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
+  isAdmin: boolean;
   loading: boolean;
   signOut: () => Promise<void>;
   resendVerification: () => Promise<void>;
@@ -65,10 +66,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let unsubscribeProfile: () => void = () => {};
+    let unsubscribeAdmin: () => void = () => {};
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (authUser) => {
       setUser(authUser);
@@ -95,9 +98,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setProfile(snap.data() as UserProfile);
           }
         });
+
+        const adminRef = doc(db, 'admins', authUser.uid);
+        unsubscribeAdmin = onSnapshot(adminRef, (snap) => {
+           setIsAdmin(snap.exists() || authUser.email === 'm.sufiyan1581@gmail.com');
+        });
       } else {
         setProfile(null);
+        setIsAdmin(false);
         unsubscribeProfile();
+        unsubscribeAdmin();
       }
       setLoading(false);
     });
@@ -105,6 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       unsubscribeAuth();
       unsubscribeProfile();
+      unsubscribeAdmin();
     };
   }, []);
 
@@ -124,7 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signOut, resendVerification, refreshUser }}>
+    <AuthContext.Provider value={{ user, profile, isAdmin, loading, signOut, resendVerification, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

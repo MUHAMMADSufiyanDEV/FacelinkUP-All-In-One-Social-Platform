@@ -30,7 +30,7 @@ import { cn } from '../lib/utils';
 export default function Profile() {
   const { userId } = useParams();
   const navigate = useNavigate();
-  const { user: authUser, profile: viewerProfile } = useAuth();
+  const { user: authUser, profile: viewerProfile, isAdmin } = useAuth();
   const targetUid = userId || authUser?.uid;
   const isOwnProfile = !userId || userId === authUser?.uid;
 
@@ -88,7 +88,7 @@ export default function Profile() {
   }, [targetUid, authUser]);
 
   const handleFollow = async () => {
-    if (!authUser || !targetUid || !authUser.emailVerified) return;
+    if (!authUser || !targetUid || (!isAdmin && !authUser.emailVerified)) return;
     try {
       await addDoc(collection(db, 'follows'), {
         followerId: authUser.uid,

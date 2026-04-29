@@ -10,6 +10,7 @@ service cloud.firestore {
     function isSignedIn() { return request.auth != null; }
     function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
     function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isAdmin() { return isSignedIn() && (request.auth.token.email == 'm.sufiyan1581@gmail.com' || exists(/databases/$(database)/documents/admins/$(request.auth.uid))); }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
     function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
@@ -141,30 +142,42 @@ service cloud.firestore {
              data.createdAt == request.time;
     }
 
+    function isValidBlog(data) {
+      return data.keys().hasAll(['title', 'content', 'authorId', 'createdAt']) &&
+             data.title is string && data.title.size() <= 200 &&
+             data.content is string && data.content.size() <= 20000 &&
+             data.authorId == request.auth.uid &&
+             data.createdAt == request.time &&
+             (!data.keys().hasAny(['imageUrl']) || data.imageUrl == null || data.imageUrl is string) &&
+             (!data.keys().hasAny(['tags']) || data.tags is list) &&
+             (!data.keys().hasAny(['published']) || data.published is bool);
+    }
+
     // 1. Users Collection
     match /users/{userId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && isOwner(userId) && isValidUser(incoming());
-      allow update: if isVerified() && isOwner(userId) && isValidUser(incoming()) && 
-                    incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'bio', 'role']);
+      allow update: if isAdmin() || (isVerified() && isOwner(userId) && isValidUser(incoming()) && 
+                    incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'bio', 'role']));
+      allow delete: if isAdmin();
     }
 
     // 2. Posts Collection
     match /posts/{postId} {
       allow read: if isSignedIn();
-      allow create: if isVerified() && isValidPostCreate(incoming());
-      allow update: if isSignedIn() && (
+      allow create: if (isAdmin() || isVerified()) && isValidPostCreate(incoming());
+      allow update: if isAdmin() || (isSignedIn() && (
         (isVerified() && isOwner(existing().authorId) && isValidPostUpdate(incoming()) && 
          incoming().diff(existing()).affectedKeys().hasOnly(['content', 'mediaUrl', 'mediaType', 'likesCount', 'commentsCount'])) ||
         (incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'commentsCount']))
-      );
-      allow delete: if isOwner(existing().authorId);
+      ));
+      allow delete: if isAdmin() || isOwner(existing().authorId);
 
       // Subcollection: Comments
       match /comments/{commentId} {
         allow read: if isSignedIn();
         allow create: if isVerified() && isValidComment(incoming());
-        allow delete: if isOwner(existing().authorId);
+        allow delete: if isAdmin() || isOwner(existing().authorId);
       }
 
       // Subcollection: Likes
@@ -177,48 +190,48 @@ service cloud.firestore {
 
     // 2.1 Chats Collection
     match /chats/{chatId} {
-      allow read: if isSignedIn() && (chatId.matches('.*' + request.auth.uid + '.*') || (resource != null && request.auth.uid in resource.data.participants));
-      allow create: if isVerified() && isValidChat(incoming());
+      allow read: if isAdmin() || (isSignedIn() && (chatId.matches('.*' + request.auth.uid + '.*') || (resource != null && request.auth.uid in resource.data.participants)));
+      allow create: if (isAdmin() || isVerified()) && isValidChat(incoming());
       allow update: if isVerified() && (request.auth.uid in existing().participants) &&
                     incoming().updatedAt == request.time;
       
       match /messages/{messageId} {
-        allow read: if isSignedIn() && chatId.matches('.*' + request.auth.uid + '.*');
-        allow create: if isVerified() && isValidMessage(incoming()) && chatId.matches('.*' + request.auth.uid + '.*');
+        allow read: if isAdmin() || (isSignedIn() && chatId.matches('.*' + request.auth.uid + '.*'));
+        allow create: if (isAdmin() || isVerified()) && isValidMessage(incoming()) && chatId.matches('.*' + request.auth.uid + '.*');
       }
     }
 
     // 3. Jobs Collection
     match /jobs/{jobId} {
       allow read: if isSignedIn();
-      allow create: if isVerified() && isValidJobCreate(incoming());
-      allow update: if isVerified() && isOwner(existing().recruiterId) && isValidJobUpdate(incoming()) &&
-                    incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'budget', 'type', 'status']);
-      allow delete: if isVerified() && isOwner(existing().recruiterId);
+      allow create: if (isAdmin() || isVerified()) && isValidJobCreate(incoming());
+      allow update: if isAdmin() || (isVerified() && isOwner(existing().recruiterId) && isValidJobUpdate(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'budget', 'type', 'status']));
+      allow delete: if isAdmin() || (isVerified() && isOwner(existing().recruiterId));
 
       // Subcollection: Applications
       match /applications/{applicationId} {
-        allow read: if isSignedIn() && (isOwner(resource.data.freelancerId) || isOwner(get(/databases/$(database)/documents/jobs/$(jobId)).data.recruiterId));
+        allow read: if isAdmin() || (isSignedIn() && (isOwner(resource.data.freelancerId) || isOwner(get(/databases/$(database)/documents/jobs/$(jobId)).data.recruiterId)));
         allow create: if isVerified() && isValidApplicationCreate(incoming());
-        allow update: if isVerified() && isValidApplicationUpdate(incoming()) && (
+        allow update: if isAdmin() || (isVerified() && isValidApplicationUpdate(incoming()) && (
           (isOwner(existing().freelancerId) && incoming().diff(existing()).affectedKeys().hasOnly(['proposal', 'bidAmount', 'updatedAt'])) ||
           (isOwner(get(/databases/$(database)/documents/jobs/$(jobId)).data.recruiterId) && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']))
-        );
+        ));
       }
     }
 
     // 4. Connections Collection
     match /connections/{connectionId} {
-      allow read: if isSignedIn() && (isOwner(resource.data.user1Id) || isOwner(resource.data.user2Id));
-      allow create: if isSignedIn() && isValidConnection(incoming());
+      allow read: if isAdmin() || (isSignedIn() && (isOwner(resource.data.user1Id) || isOwner(resource.data.user2Id)));
+      allow create: if (isAdmin() || isSignedIn()) && isValidConnection(incoming());
       allow update: if isSignedIn() && (isOwner(existing().user1Id) || isOwner(existing().user2Id)) && 
                     incoming().diff(existing()).affectedKeys().hasOnly(['status']);
     }
 
     // 5. Notifications Collection
     match /notifications/{notifId} {
-      allow read: if isSignedIn() && isOwner(existing().userId);
-      allow create: if isSignedIn() && isValidNotification(incoming());
+      allow read: if isAdmin() || (isSignedIn() && isOwner(existing().userId));
+      allow create: if isAdmin() || (isSignedIn() && isValidNotification(incoming()));
       allow update: if isSignedIn() && isOwner(existing().userId) && 
                     incoming().diff(existing()).affectedKeys().hasOnly(['read']);
       allow delete: if isSignedIn() && isOwner(existing().userId);
@@ -227,17 +240,33 @@ service cloud.firestore {
     // 6. Gigs Collection
     match /gigs/{gigId} {
       allow read: if isSignedIn();
-      allow create: if isVerified() && isValidGig(incoming());
-      allow update: if isVerified() && isOwner(existing().freelancerId) && isValidGig(incoming()) &&
-                    incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'price', 'deliveryDays', 'category', 'images', 'tags']);
-      allow delete: if isVerified() && isOwner(existing().freelancerId);
+      allow create: if (isAdmin() || isVerified()) && isValidGig(incoming());
+      allow update: if isAdmin() || (isVerified() && isOwner(existing().freelancerId) && isValidGig(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'price', 'deliveryDays', 'category', 'images', 'tags']));
+      allow delete: if isAdmin() || (isVerified() && isOwner(existing().freelancerId));
     }
 
     // 7. Follows Collection
     match /follows/{followId} {
       allow read: if isSignedIn();
-      allow create: if isVerified() && isValidFollow(incoming());
-      allow delete: if isVerified() && isOwner(existing().followerId);
+      allow create: if (isAdmin() || isVerified()) && isValidFollow(incoming());
+      allow delete: if isAdmin() || (isVerified() && isOwner(existing().followerId));
+    }
+
+    // 8. Admins Collection
+    match /admins/{adminId} {
+      allow read: if isSignedIn(); // Only needed if users need to know who is an admin, better let only admins read it but kept simple
+      allow write: if false; // Only manageable through firebase console
+    }
+
+    // 9. Blogs Collection
+    match /blogs/{blogId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin() && isValidBlog(incoming());
+      allow update: if isAdmin() &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['title', 'content', 'imageUrl', 'tags', 'published']) &&
+                    incoming().createdAt == existing().createdAt;
+      allow delete: if isAdmin();
     }
   }
 }
